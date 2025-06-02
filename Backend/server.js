@@ -16,7 +16,7 @@ const client = new MongoClient(uri);
 async function connectDB() {
     try {
         await client.connect();
-        console.log('Connected to MongoDB for Tutor Applications!');
+        console.log('Connected to MongoDB for Tutor Applications and Student Progress!');
     } catch (err) {
         console.error('Failed to connect to MongoDB:', err);
         process.exit(1);
@@ -24,6 +24,7 @@ async function connectDB() {
 }
 connectDB();
 
+// Handle tutor application submission
 app.post('/api/tutors', async (req, res) => {
     const tutorData = req.body;
 
@@ -40,6 +41,36 @@ app.post('/api/tutors', async (req, res) => {
     } catch (error) {
         console.error('MongoDB Error saving tutor application:', error);
         res.status(500).json({ message: 'Failed to save tutor application.' });
+    }
+});
+
+// Handle student progress update
+app.post('/api/progress', async (req, res) => {
+    const { name, score } = req.body;
+
+    if (!name || score == null) {
+        return res.status(400).json({ message: 'Name and score are required.' });
+    }
+
+    try {
+        const db = client.db(process.env.DB_NAME);
+        const progressCollection = db.collection('student_progress');
+
+        const progressEntry = {
+            name,
+            score,
+            date: new Date()
+        };
+
+        const result = await progressCollection.insertOne(progressEntry);
+
+        res.status(201).json({
+            message: 'Student progress submitted successfully!',
+            insertedId: result.insertedId,
+        });
+    } catch (error) {
+        console.error('MongoDB Error saving student progress:', error);
+        res.status(500).json({ message: 'Failed to save student progress.' });
     }
 });
 
