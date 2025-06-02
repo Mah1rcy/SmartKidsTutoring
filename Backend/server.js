@@ -7,8 +7,17 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+// CORS setup to allow browser access (even from file:// or other origins)
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
+}));
+
 app.use(bodyParser.json());
+
+// Serve static files from "public" folder
+app.use(express.static('public'));
 
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
@@ -30,7 +39,7 @@ app.post('/api/tutors', async (req, res) => {
 
     try {
         const db = client.db(process.env.DB_NAME);
-        const tutorsCollection = db.collection('tutors'); // Collection name for tutor applications
+        const tutorsCollection = db.collection('tutors');
 
         const result = await tutorsCollection.insertOne(tutorData);
 
