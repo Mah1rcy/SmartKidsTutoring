@@ -7,82 +7,83 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// CORS setup to allow browser access (even from file:// or other origins)
+// CORS setup to fix access control issue
 app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type'],
+  origin: '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
 }));
 
+// Parse JSON bodies
 app.use(bodyParser.json());
 
-// Serve static files from "public" folder
+// Serve static HTML/CSS/JS from public folder
 app.use(express.static('public'));
 
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 
 async function connectDB() {
-    try {
-        await client.connect();
-        console.log('Connected to MongoDB for Tutor Applications and Student Progress!');
-    } catch (err) {
-        console.error('Failed to connect to MongoDB:', err);
-        process.exit(1);
-    }
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB for Tutor Applications and Student Progress!');
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
+  }
 }
 connectDB();
 
 // Handle tutor application submission
 app.post('/api/tutors', async (req, res) => {
-    const tutorData = req.body;
+  const tutorData = req.body;
 
-    try {
-        const db = client.db(process.env.DB_NAME);
-        const tutorsCollection = db.collection('tutors');
+  try {
+    const db = client.db(process.env.DB_NAME);
+    const tutorsCollection = db.collection('tutors');
 
-        const result = await tutorsCollection.insertOne(tutorData);
+    const result = await tutorsCollection.insertOne(tutorData);
 
-        res.status(201).json({
-            message: 'Tutor application submitted successfully!',
-            insertedId: result.insertedId,
-        });
-    } catch (error) {
-        console.error('MongoDB Error saving tutor application:', error);
-        res.status(500).json({ message: 'Failed to save tutor application.' });
-    }
+    res.status(201).json({
+      message: 'Tutor application submitted successfully!',
+      insertedId: result.insertedId,
+    });
+  } catch (error) {
+    console.error('MongoDB Error saving tutor application:', error);
+    res.status(500).json({ message: 'Failed to save tutor application.' });
+  }
 });
 
 // Handle student progress update
 app.post('/api/progress', async (req, res) => {
-    const { name, score } = req.body;
+  const { name, score } = req.body;
 
-    if (!name || score == null) {
-        return res.status(400).json({ message: 'Name and score are required.' });
-    }
+  if (!name || score == null) {
+    return res.status(400).json({ message: 'Name and score are required.' });
+  }
 
-    try {
-        const db = client.db(process.env.DB_NAME);
-        const progressCollection = db.collection('student_progress');
+  try {
+    const db = client.db(process.env.DB_NAME);
+    const progressCollection = db.collection('student_progress');
 
-        const progressEntry = {
-            name,
-            score,
-            date: new Date()
-        };
+    const progressEntry = {
+      name,
+      score,
+      date: new Date(),
+    };
 
-        const result = await progressCollection.insertOne(progressEntry);
+    const result = await progressCollection.insertOne(progressEntry);
 
-        res.status(201).json({
-            message: 'Student progress submitted successfully!',
-            insertedId: result.insertedId,
-        });
-    } catch (error) {
-        console.error('MongoDB Error saving student progress:', error);
-        res.status(500).json({ message: 'Failed to save student progress.' });
-    }
+    res.status(201).json({
+      message: 'Student progress submitted successfully!',
+      insertedId: result.insertedId,
+    });
+  } catch (error) {
+    console.error('MongoDB Error saving student progress:', error);
+    res.status(500).json({ message: 'Failed to save student progress.' });
+  }
 });
 
 app.listen(port, '0.0.0.0', () => {
-    console.log(`Server is running on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
