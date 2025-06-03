@@ -94,7 +94,7 @@
     }
 
     try {
-      const res = await fetch('/api/progress', {
+      const res = await fetch('https://smartkids-backend.onrender.com/api/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, score })
