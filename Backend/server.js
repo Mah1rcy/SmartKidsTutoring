@@ -1,48 +1,43 @@
-require('dotenv').config(); // Load environment variables
-const express = require('express');
-const bodyParser = require('body-parser');
-const { MongoClient } = require('mongodb');
-const cors = require('cors');
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(cors());
-app.use(bodyParser.json());
-
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
-
-async function connectDB() {
-    try {
-        await client.connect();
-        console.log('Connected to MongoDB for Tutor Applications!');
-    } catch (err) {
-        console.error('Failed to connect to MongoDB:', err);
-        process.exit(1);
-    }
-}
-connectDB();
-
-app.post('/api/tutors', async (req, res) => {
-    const tutorData = req.body;
+// ✅ Check if the student already submitted a test
+app.get('/api/test-status', async (req, res) => {
+    const { student_id, test_id } = req.query;
 
     try {
         const db = client.db(process.env.DB_NAME);
-        const tutorsCollection = db.collection('tutors'); // Collection name for tutor applications
+        const submissions = db.collection('test_submissions');
 
-        const result = await tutorsCollection.insertOne(tutorData);
+        const record = await submissions.findOne({ student_id, test_id });
 
-        res.status(201).json({
-            message: 'Tutor application submitted successfully!',
-            insertedId: result.insertedId,
-        });
+        res.json({ alreadyTaken: !!record }); // true if found, false if not
     } catch (error) {
-        console.error('MongoDB Error saving tutor application:', error);
-        res.status(500).json({ message: 'Failed to save tutor application.' });
+        console.error('Error checking test status:', error);
+        res.status(500).json({ message: 'Internal server error.' });
     }
 });
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server is running on port ${port}`);
+// ✅ Submit test if not already submitted
+app.post('/api/submit-test', async (req, res) => {
+    const { student_id, test_id, answers } = req.body;
+
+    try {
+        const db = client.db(process.env.DB_NAME);
+        const submissions = db.collection('test_submissions');
+
+        const exists = await submissions.findOne({ student_id, test_id });
+        if (exists) {
+            return res.status(403).json({ message: 'You already submitted this test.' });
+        }
+
+        await submissions.insertOne({
+            student_id,
+            test_id,
+            answers,
+            submitted_at: new Date()
+        });
+
+        res.status(201).json({ message: 'Test submitted successfully!' });
+    } catch (error) {
+        console.error('Error submitting test:', error);
+        res.status(500).json({ message: 'Failed to submit test.' });
+    }
 });
